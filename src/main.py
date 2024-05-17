@@ -17,7 +17,7 @@ app.mount("/static", StaticFiles(directory=static_path), name='static')
 
 app.include_router(auth_router)
 app.include_router(comment_router)
-app.include_router(photo_router)
+app.include_router(photo_router, prefix="/photos")
 app.include_router(user_router)
 app.include_router(frontend_router)
 
