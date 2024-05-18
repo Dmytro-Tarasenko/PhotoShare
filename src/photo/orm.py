@@ -26,4 +26,3 @@ class PhotoORM(Base):
     author: Mapped[ProfileORM] = relationship("ProfileORMr", back_populates="photos")
     comments: Mapped[List["CommentORM"]] = relationship(back_populates="photos")
     tags: Mapped[List[TagORM]] = relationship(secondary=photo_tag_association_table, back_populates="photos")
-

@@ -47,11 +47,14 @@ def read_comment(comment_id: int, db: Session = Depends(get_db)):
     return db_comment
 
 @router.put("/{comment_id}", response_model=CommentModel)
-def update_comment(comment_id: int, comment: CommentUpdate, db: Session = Depends(get_db)):
+def update_comment(comment_id: int, comment: CommentUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_comment = db.query(CommentORM).filter(CommentORM.id == comment_id).first()
     if db_comment is None:
         raise HTTPException(status_code=404, detail="Comment not found")
     
+    if db_comment.author_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
     for var, value in vars(comment).items():
         setattr(db_comment, var, value) if value else None
 
@@ -61,10 +64,14 @@ def update_comment(comment_id: int, comment: CommentUpdate, db: Session = Depend
     return db_comment
 
 @router.delete("/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_comment(comment_id: int, db: Session = Depends(get_db)):
+def delete_comment(comment_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_comment = db.query(CommentORM).filter(CommentORM.id == comment_id).first()
     if db_comment is None:
         raise HTTPException(status_code=404, detail="Comment not found")
+    
+    if current_user.role not in ["admin", "moderator"]:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
     db.delete(db_comment)
     db.commit()
     return None
