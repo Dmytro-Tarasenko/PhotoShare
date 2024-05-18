@@ -24,6 +24,9 @@ class EnvSettings(BaseSettings):
     mail_port: int
     mail_from: str
     cloudinary_url: str
+    cloudinary_name: str
+    cloudinary_api_key: str
+    cloudinary_api_secret: str
 
 
 # production environment
