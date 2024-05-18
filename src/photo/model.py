@@ -20,6 +20,7 @@ class PhotoUpdate(PhotoModel):
 class PhotoResponse(PhotoModel):
     id: int
     url: str
+    public_id: str
     author_fk: int
     comments: List[CommentORM] = []
     tags: List[TagORM] = []
