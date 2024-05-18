@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, Field, PositiveInt
-from photo.model import PhotoModel
+from photo.model import PhotoResponse
 from user_profile.model import UserProfileModel
 
 
@@ -31,7 +31,7 @@ class CommentModel(CommentBase):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: Optional[datetime] = None
     author: UserProfileModel
-    photo: PhotoModel
+    photo: PhotoResponse
 
     class Config:
         orm_mode = True

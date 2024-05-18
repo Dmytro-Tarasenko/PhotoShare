@@ -2,9 +2,11 @@ from datetime import datetime
 from sqlalchemy import Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+
+# from user_profile.orm import ProfileORM
+# from photo.orm import PhotoORM
 from database import Base
-from photo.orm import PhotoORM
-from user_profile.orm import ProfileORM
+
 
 class CommentORM(Base):
     """
@@ -19,6 +21,6 @@ class CommentORM(Base):
     author_fk: Mapped[int] = mapped_column(Integer, ForeignKey('profiles.id', ondelete='CASCADE'))
     photo_fk: Mapped[int] = mapped_column(Integer, ForeignKey('photos.id', ondelete='CASCADE'))
 
-    author: Mapped[ProfileORM] = relationship("ProfileORM", back_populates="comments", cascade="all, delete")
-    photo: Mapped[PhotoORM] = relationship("PhotoORM", back_populates="comments", cascade="all, delete")
+    author: Mapped["ProfileORM"] = relationship("ProfileORM", back_populates="comments", cascade="all, delete")
+    photo: Mapped["PhotoORM"] = relationship("PhotoORM", back_populates="comments", cascade="all, delete")
 
