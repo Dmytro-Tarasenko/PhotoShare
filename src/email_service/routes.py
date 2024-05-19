@@ -74,7 +74,8 @@ async def send_confirmation(
 
     Finally, a JSON response is returned with a success message indicating that the email has been sent to the specified email address.
     """
-    user_db: UserORM = await db.execute(select(UserORM).filter(UserORM.email == email)).scalars().first()
+    user_db = await db.execute(select(UserORM).filter(UserORM.email == email.email))
+    user_db = user_db.scalars().first()
     if not user_db:
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,

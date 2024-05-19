@@ -53,7 +53,8 @@ async def new_user(
         - The newly created user's information is returned in the JSON response.
         - The confirmation message is also included in the JSON response.
     """
-    exists = await db.execute(select(UserORM).filter(UserORM.email == user.email)).scalars().first()
+    exists = await db.execute(select(UserORM).filter(UserORM.email == user.email))
+    exists = exists.scalars().first()
     if exists:
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
@@ -65,7 +66,8 @@ async def new_user(
 
     hashed_pwd = auth_service.get_hash_password(user.password)
     user = UserORM(email=user.email,
-                   hashed_pwd=hashed_pwd)
+                   username=user.username,
+                   password=hashed_pwd)
     db.add(user)
     await db.commit()
 
@@ -74,8 +76,8 @@ async def new_user(
                                   bg_task=bg_task,
                                   db=db)
 
-    ret_user = await db.execute(select(UserORM).filter(UserORM.email == user.email)).scalars().first()
-
+    ret_user = await db.execute(select(UserORM).filter(UserORM.email == user.email))
+    ret_user = ret_user.scalars().first()
     return JSONResponse(
         status_code=201,
         content={**UserDBModel.from_orm(ret_user).dict(exclude={"id"}),
@@ -213,4 +215,3 @@ async def logout(
         return {"details": "User logged out"}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Internal server error: {e}")
-
