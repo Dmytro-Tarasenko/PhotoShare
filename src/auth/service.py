@@ -76,7 +76,7 @@ class Authentication:
             else self.SECRET_512
 
         algorithm = self.ACCESS_ALGORITHM \
-            if scope == "access_token" \
+            if scope == "access_token" or scope == "email_token" \
             else self.REFRESH_ALGORITHM
 
         payload = {
@@ -96,27 +96,27 @@ class Authentication:
             email: str,
             live_time: timedelta = timedelta(days=1)
     ) -> Any:
-        return self.create_token(email=email,
-                                 live_time=live_time,
-                                 scope="access_token")
+        return await self.create_token(email=email,
+                                       live_time=live_time,
+                                       scope="access_token")
 
     async def create_refresh_token(
             self,
             email: str,
             live_time: timedelta = timedelta(days=7)
     ) -> Any:
-        return self.create_token(email=email,
-                                 scope="refresh_token",
-                                 live_time=live_time)
+        return await self.create_token(email=email,
+                                       scope="refresh_token",
+                                       live_time=live_time)
 
-    def create_email_token(
+    async def create_email_token(
             self,
             email: str,
             live_time: timedelta = timedelta(hours=12)
     ) -> Any:
-        return self.create_token(email=email,
-                                 live_time=live_time,
-                                 scope="email_token")
+        return await self.create_token(email=email,
+                                       live_time=live_time,
+                                       scope="email_token")
 
     async def get_user(
             self,
@@ -211,7 +211,7 @@ class Authentication:
         Returns:
             Any: The user retrieved using the token and database session.
         """
-        return self.get_user(
+        return await self.get_user(
             token=token,
             db=db,
             scope="access_token"
@@ -232,13 +232,13 @@ class Authentication:
         Returns:
             Any: The user retrieved using the token and database session with scope set to "refresh_token".
         """
-        return self.get_user(
+        return await self.get_user(
             token=token,
             db=db,
             scope="refresh_token"
         )
 
-    def get_email_user(
+    async def get_email_user(
             self,
             token: Annotated[str, Depends(oauth2_schema)],
             db: Annotated[AsyncSession, Depends(get_db)]
@@ -253,7 +253,7 @@ class Authentication:
         Returns:
             Any: The user information retrieved using the provided token and database session.
         """
-        return self.get_user(
+        return await self.get_user(
             token=token,
             db=db,
             scope="email_token"
