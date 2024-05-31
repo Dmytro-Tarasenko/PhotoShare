@@ -26,8 +26,9 @@ In this project we used the following technologies:\
 
 Python\
 FastAPI\
-PostgreSQL (for the database)\
-Docker (for containerization)\
+SQLAlchemy\
+htmx\
+Docker\
 Other dependencies listed in requirements.txt and package.json
 
 ## 🚀 Starting
@@ -42,6 +43,7 @@ To run the Photo Share project locally, follow these steps:
 2. Install dependencies:
    ```sh
    pip install -r requirements.txt
+   poetry install
    ```
    Create file `.env` using `.env.example`.
 

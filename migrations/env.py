@@ -1,4 +1,6 @@
 import asyncio
+import re
+
 from logging.config import fileConfig
 
 from sqlalchemy import pool
@@ -13,7 +15,12 @@ from settings import settings
 # access to the values within the .ini file in use.
 config = context.config
 
-config.set_main_option('sqlalchemy.url', settings.sqlalchemy_url)
+sqlalchemy_url = settings.sqlalchemy_url
+if re.search(r"sqlite", sqlalchemy_url):
+    sqlalchemy_url = re.sub(r":///", r":///src/", sqlalchemy_url)
+
+config.set_main_option('sqlalchemy.url', sqlalchemy_url)
+
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

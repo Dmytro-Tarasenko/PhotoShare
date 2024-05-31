@@ -1,5 +1,6 @@
 import re
 from datetime import datetime, timezone
+from operator import and_
 
 from jose import jwt
 from sqlalchemy import select, or_
@@ -10,10 +11,11 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, HTTPException, Form
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
+from sqlalchemy.orm import selectinload, defer
 from starlette import status
 from starlette.requests import Request
 
-from userprofile.model import TokenModel, UserAuthModel, UserDBModel, UserRegisterModel
+from userprofile.model import TokenModel, UserAuthModel, UserDBModel, UserRegisterModel, UserProfileModel
 from database import get_db
 
 from auth.service import auth as auth_service
@@ -24,21 +26,23 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post(
     "/register",
-    response_model=UserDBModel,
+    response_model=UserProfileModel,
     responses={
         409: {"description": "User already exists"},
-        201: {"model": UserDBModel},
+        201: {"profile": UserProfileModel},
     },
 )
 async def auth_register(
-        username: Annotated[str, Form(...)],
-        email: Annotated[str, Form(...)],
-        password: Annotated[str, Form(...)],
+        username: Annotated[str, Form()],
+        email: Annotated[str, Form()],
+        password: Annotated[str, Form()],
         db: Annotated[AsyncSession, Depends(get_db)]
 ) -> Any:
+    clauses = (UserORM.username == username,
+               ProfileORM.email == email)
     exists = await db.execute(
-        select(UserORM).filter(
-            or_(UserORM.email == email, UserORM.username == username)
+        select(UserORM, ProfileORM).where(
+            or_(*clauses)
         )
     )
     exists = exists.scalars().first()
@@ -52,25 +56,31 @@ async def auth_register(
         )
 
     hashed_pwd = auth_service.get_hash_password(password)
-    user_orm = UserORM(email=email, username=username, password=hashed_pwd)
-    user_orm.profile = ProfileORM(user=user_orm)
+    user_orm = UserORM(username=username, password=hashed_pwd)
+    user_orm.profile = ProfileORM(email=email, user=user_orm)
 
     db.add(user_orm)
     await db.commit()
     await db.refresh(user_orm)
 
-    ret_user = await db.execute(select(UserORM).filter(UserORM.email == email))
+    stmnt = (
+        select(ProfileORM)
+        .where(ProfileORM.email == email)
+        .options(
+            selectinload(ProfileORM.user),
+            selectinload(ProfileORM.photos),
+            selectinload(ProfileORM.comments)
+        )
+    )
+    ret_user = await db.execute(stmnt)
     ret_user = ret_user.scalars().first()
-    user_db_model = UserDBModel.from_orm(ret_user)
-    user_db_model.registered_at = user_db_model.registered_at.isoformat()
+
+    user_profile_model = UserProfileModel(**ret_user.__dict__)
 
     return JSONResponse(
         status_code=201,
         content={
-            **UserDBModel.from_orm(ret_user).model_dump(
-                exclude={"id", "password", "registered_at"}
-            ),
-            "registered_at": str(ret_user.registered_at),
+           "profile": user_profile_model
         },
     )
 

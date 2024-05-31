@@ -1,13 +1,14 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Any, Annotated
 
-from pydantic import (BaseModel,
-                      EmailStr,
-                      PastDate,
-                      computed_field,
-                      Field, PositiveInt, ConfigDict)
+import pydantic
+from pydantic import (BaseModel, EmailStr,
+                      PastDate, computed_field,
+                      Field, PositiveInt,
+                      ConfigDict, ValidationInfo)
+from pydantic.functional_validators import BeforeValidator, field_validator
 
-from userprofile.orm import Role
+from userprofile.orm import Role, UserORM
 
 
 class UserAuthModel(BaseModel):
@@ -28,7 +29,6 @@ class UserRegisterModel(UserAuthModel):
     birthday: Optional[PastDate] = Field(default=None)
 
 
-
 class UserDBModel(UserAuthModel):
     """
     Model that stores user data in DB
@@ -40,19 +40,34 @@ class UserDBModel(UserAuthModel):
     role: Role
 
 
+def extract_username(info: ValidationInfo):
+    print(info)
+
+
 class UserProfileModel(BaseModel):
     """
     Model that holds all user information
     """
+    model_config = ConfigDict(from_attributes=True,
+                              validate_assignment=True)
+
     username: str
-    first_name: str
+    first_name: Optional[str]
     last_name: Optional[str]
     email: EmailStr
     birthday: Optional[PastDate]
     registered_at: datetime = Field(default=datetime.now(timezone.utc))
+    is_banned: bool = Field(default=False)
     role: Role = Field(default='user')
     photos: int = Field(default=0, ge=0)
     comments: int = Field(default=0, ge=0)
+
+    @field_validator('username', mode='before')
+    @classmethod
+    def username_from_orm(cls,
+                          raw: Any,
+                          info: ValidationInfo):
+        print("Validation passed")
 
     @computed_field
     @property
