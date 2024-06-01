@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import selectinload
 
 from database import get_db
-from comment.model import CommentModel, CommentCreate, CommentUpdate, CommentBase
+from comment.model import CommentModel, CommentUpdate
 from comment.orm import CommentORM
 from photo.orm import PhotoORM
 from userprofile.orm import ProfileORM, UserORM

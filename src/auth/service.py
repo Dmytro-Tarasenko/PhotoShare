@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Any, TypeAlias, Literal, Annotated, List
 
@@ -9,7 +10,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
-from userprofile.orm import UserORM, BlackListORM
+from userprofile.orm import UserORM, BlackListORM, ProfileORM
 from database import get_db
 from settings import settings
 
@@ -237,15 +238,22 @@ class Authentication:
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
             )
 
-        email = payload.get("sub")
-        if email is None:
+        profile_id = payload.get("sub")
+        if profile_id is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Username not found in token",
             )
 
-        db_res = await db.execute(select(UserORM).where(UserORM.email == email))
-        db_user = db_res.scalars().first()
+        db_res = await db.execute(
+            select(UserORM.username,
+                   UserORM.loggedin,
+                   ProfileORM.role,
+                   ProfileORM.is_banned)
+            .join(ProfileORM.user)
+            .where(ProfileORM.id == uuid.UUID(profile_id))
+        )
+        db_user = db_res.first()
         if db_user is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="User not found."

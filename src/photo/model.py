@@ -20,14 +20,6 @@ class TransformRequest(BaseModel):
     color: Optional[str] = None
 
 
-class PhotoCreateQR(BaseModel):
-    qrcode_url: Optional[str] = None
-
-
-class PhotoUpdate(BaseModel):
-    description: Optional[str] = None
-
-
 class PhotoResponse(PhotoModel):
     id: int
     author: Any

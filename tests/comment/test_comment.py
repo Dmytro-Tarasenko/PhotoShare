@@ -1,8 +1,5 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
-from auth.service import auth as auth_service
-from comment.model import CommentCreate, CommentUpdate
 from comment.routes import router
 from main import app
 

@@ -10,13 +10,6 @@ class CommentBase(BaseModel):
     text: str = Field(min_length=1)
 
 
-class CommentCreate(CommentBase):
-    """
-    Model for creating a new comment
-    """
-    pass
-
-
 class CommentUpdate(CommentBase):
     """
     Model for updating an existing comment

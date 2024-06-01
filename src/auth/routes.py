@@ -1,9 +1,10 @@
 import re
+import uuid
 from datetime import datetime, timezone
 from operator import and_
 
 from jose import jwt
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, join
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated, Any
@@ -15,7 +16,8 @@ from sqlalchemy.orm import selectinload, defer
 from starlette import status
 from starlette.requests import Request
 
-from userprofile.model import TokenModel, UserAuthModel, UserDBModel, UserRegisterModel, UserProfileModel
+from auth.model import TokenModel, RegisteredUserModel
+from userprofile.model import UserProfileModel
 from database import get_db
 
 from auth.service import auth as auth_service
@@ -26,10 +28,10 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 @router.post(
     "/register",
-    response_model=UserProfileModel,
+    response_model=RegisteredUserModel,
     responses={
         409: {"description": "User already exists"},
-        201: {"profile": UserProfileModel},
+        201: {"user": RegisteredUserModel},
     },
 )
 async def auth_register(
@@ -41,7 +43,9 @@ async def auth_register(
     clauses = (UserORM.username == username,
                ProfileORM.email == email)
     exists = await db.execute(
-        select(UserORM, ProfileORM).where(
+        select(ProfileORM, UserORM)
+        .join(ProfileORM.user)
+        .where(
             or_(*clauses)
         )
     )
@@ -57,32 +61,25 @@ async def auth_register(
 
     hashed_pwd = auth_service.get_hash_password(password)
     user_orm = UserORM(username=username, password=hashed_pwd)
-    user_orm.profile = ProfileORM(email=email, user=user_orm)
+    user_orm.profile = ProfileORM(email=email,
+                                  user=user_orm,
+                                  id=uuid.uuid4())
 
     db.add(user_orm)
     await db.commit()
     await db.refresh(user_orm)
 
     stmnt = (
-        select(ProfileORM)
-        .where(ProfileORM.email == email)
-        .options(
-            selectinload(ProfileORM.user),
-            selectinload(ProfileORM.photos),
-            selectinload(ProfileORM.comments)
-        )
+        select(ProfileORM.id, UserORM.username)
+        .join(ProfileORM.user)
+        .where(UserORM.username == username)
     )
-    ret_user = await db.execute(stmnt)
-    ret_user = ret_user.scalars().first()
+    db_response = await db.execute(stmnt)
+    db_response = db_response.first()
 
-    user_profile_model = UserProfileModel(**ret_user.__dict__)
+    registerd_user = RegisteredUserModel.model_validate(db_response)
 
-    return JSONResponse(
-        status_code=201,
-        content={
-           "profile": user_profile_model
-        },
-    )
+    return registerd_user
 
 
 @router.post("/login", response_model=TokenModel)
@@ -92,31 +89,37 @@ async def auth_login(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Any:
     db_response = await db.execute(
-        select(UserORM).filter(UserORM.username == user.username)
+        select(UserORM,
+               ProfileORM.id,
+               ProfileORM.is_banned)
+        .join(ProfileORM.user)
+        .where(UserORM.username == user.username)
     )
-    user_db: UserORM = db_response.scalars().first()
+    user_db = db_response.first()
+    print(user_db)
     if not user_db:
         return JSONResponse(
             status_code=status.HTTP_404_NOT_FOUND,
             content={
-                "detail": {"msg": f"User with username: {user.username} not found"}
+                "detail": {"msg": "User with username: "
+                                  f"{user.username} not found"}
             }
         )
 
-    if not auth_service.verify_password(user.password, user_db.password):
+    if not auth_service.verify_password(user.password, user_db.UserORM.password):
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": {"msg": "Invalid credentials"}},
         )
     iat = datetime.now(timezone.utc)
-    access_token = auth_service.create_access_token(sub=user_db.email,
+    access_token = auth_service.create_access_token(sub=str(user_db.id),
                                                     iat=iat)
-    refresh_token = auth_service.create_refresh_token(sub=user_db.email,
+    refresh_token = auth_service.create_refresh_token(sub=str(user_db.id),
                                                       iat=iat)
-    email_token = auth_service.create_email_token(sub=user_db.email,
+    email_token = auth_service.create_email_token(sub=str(user_db.id),
                                                   iat=iat)
 
-    user_db.loggedin = True
+    user_db.UserORM.loggedin = True
 
     await db.commit()
 

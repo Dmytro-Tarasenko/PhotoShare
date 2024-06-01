@@ -35,7 +35,7 @@ class ProfileORM(Base):
     """
     __tablename__ = "profiles"
     # Table columns
-    id: Mapped[uuid.UUID] = mapped_column(types.UUID, primary_key=True, default=uuid.uuid4())
+    id: Mapped[uuid.UUID] = mapped_column(types.UUID, primary_key=True)
     first_name: Mapped[Optional[str]] = mapped_column(types.String(20))
     last_name: Mapped[Optional[str]] = mapped_column(types.String(20))
     email: Mapped[Optional[str]] = mapped_column(types.String(80), unique=True)
@@ -43,10 +43,6 @@ class ProfileORM(Base):
     email_verified: Mapped[bool] = mapped_column(default=False)
     registered_at: Mapped[datetime] = mapped_column(server_default=func.now())
     role: Mapped[Role] = mapped_column(types.String(20), default="user")
-    # full_name: Mapped[str] = mapped_column(String(),
-    #                                        unique=True,
-    #                                        default=full_name_calculated_default,
-    #                                        onupdate=full_name_calculated_update)
     birthday: Mapped[Optional[date]] = mapped_column(types.Date())
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 

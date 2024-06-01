@@ -11,39 +11,6 @@ from pydantic.functional_validators import BeforeValidator, field_validator
 from userprofile.orm import Role, UserORM
 
 
-class UserAuthModel(BaseModel):
-    """
-    Model that is used to meet OAuth2 requirements
-    """
-    username: str
-    email: EmailStr
-    password: str
-
-
-class UserRegisterModel(UserAuthModel):
-    """
-    Model that is used to meet OAuth2 requirements
-    """
-    first_name: Optional[str] = Field(default=None)
-    last_name: Optional[str] = Field(default=None)
-    birthday: Optional[PastDate] = Field(default=None)
-
-
-class UserDBModel(UserAuthModel):
-    """
-    Model that stores user data in DB
-    """
-    model_config = ConfigDict(from_attributes=True)
-
-    id: PositiveInt
-    registered_at: datetime = Field(default=datetime.now(timezone.utc))
-    role: Role
-
-
-def extract_username(info: ValidationInfo):
-    print(info)
-
-
 class UserProfileModel(BaseModel):
     """
     Model that holds all user information
@@ -62,13 +29,6 @@ class UserProfileModel(BaseModel):
     photos: int = Field(default=0, ge=0)
     comments: int = Field(default=0, ge=0)
 
-    @field_validator('username', mode='before')
-    @classmethod
-    def username_from_orm(cls,
-                          raw: Any,
-                          info: ValidationInfo):
-        print("Validation passed")
-
     @computed_field
     @property
     def full_name(self) -> str:
@@ -81,13 +41,6 @@ class UserProfileModel(BaseModel):
         """
         lname = ' ' + self.last_name if self.last_name else ''
         return self.first_name + lname
-
-
-class TokenModel(BaseModel):
-    access_token: str
-    refresh_token: str
-    email_token: str
-    token_type: str = "bearer"
 
 
 class UserPublicProfileModel(BaseModel):
